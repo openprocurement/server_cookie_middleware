@@ -55,9 +55,10 @@ class ServerCookieMiddleware(base.Middleware):
         C = SimpleCookie(req.environ.get('HTTP_COOKIE'))
         server_id = C.get(self.cookie_name, None)
         if server_id:
-            decrypted = decrypt(self.m_id, server_id.value)
+            value = server_id.value
+            decrypted = decrypt(self.m_id, value)
             if not decrypted or not decrypted.startswith(self.b_id):
-                LOGGER.info("Invalid cookie: %s", server_id.value, extra={'MESSAGE_ID': 'serverid_invalid'})
+                LOGGER.info("Invalid cookie: %s", value, extra={'MESSAGE_ID': 'serverid_invalid'})
                 value, time = encrypt(self.m_id, self.b_id)
                 C = SimpleCookie()
                 C[self.cookie_name] = value
@@ -67,8 +68,8 @@ class ServerCookieMiddleware(base.Middleware):
                 response.empty_body = True
                 raise response
             else:
-                server_id = decrypted[len(self.b_id):]
-                LOGGER.debug("Valid cookie: %s", server_id, extra={'MESSAGE_ID': 'serverid_valid'})
+                time = decrypted[len(self.b_id):]
+                LOGGER.debug("Valid cookie: %s (%s)", value, time, extra={'MESSAGE_ID': 'serverid_valid'})
         response = req.get_response(self.application)
         if not server_id:
             value, time = encrypt(self.m_id, self.b_id)
