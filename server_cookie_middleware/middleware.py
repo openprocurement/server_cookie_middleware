@@ -70,6 +70,15 @@ class ServerCookieMiddleware(base.Middleware):
             else:
                 time = decrypted[len(self.b_id):]
                 LOGGER.debug("Valid cookie: %s (%s)", value, time, extra={'MESSAGE_ID': 'serverid_valid'})
+        elif req.method in ['POST', 'PATCH', 'PUT', 'DELETE']:
+            value, time = encrypt(self.m_id, self.b_id)
+            C = SimpleCookie()
+            C[self.cookie_name] = value
+            C[self.cookie_name]['path'] = '/'
+            LOGGER.info("New cookie: %s (%s)", value, time, extra={'MESSAGE_ID': 'serverid_new'})
+            response = HTTPPreconditionFailed(headers={'Set-Cookie': C[self.cookie_name].OutputString()})
+            response.empty_body = True
+            raise response
         response = req.get_response(self.application)
         if not server_id:
             value, time = encrypt(self.m_id, self.b_id)
